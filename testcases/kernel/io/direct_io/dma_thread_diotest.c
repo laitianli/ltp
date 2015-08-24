@@ -127,6 +127,7 @@ static void dma_thread_diotest_verify(void);
 static void cleanup(void);
 static void help(void);
 
+/* 全局buffer,当fock时，全局数据要拷贝 */
 static unsigned char *buffer;
 
 static char *align_str;
@@ -154,7 +155,12 @@ typedef struct {
 	unsigned char *buffer;
 } worker_t;
 static worker_t *worker;
-
+/**ltl
+ *功能:工作线程
+ *说明:实现的功能:1.设置文件读的起始位置
+ *			   2.读数据
+ *			   3.校验
+ */
 static void *worker_thread(void *arg)
 {
 	int i, k;
@@ -162,23 +168,23 @@ static void *worker_thread(void *arg)
 	worker_t *worker = (worker_t *)arg;
 	int offset = worker->offset;
 	int fd = worker->fd;
-	unsigned char *buffer = worker->buffer;
-	int pattern = worker->pattern;
-	int length = worker->length;
-
+	unsigned char *buffer = worker->buffer; /* 数据缓冲区 */
+	int pattern = worker->pattern; /* 匹配模式 */
+	int length = worker->length;   /* 数据长度 */
+	/* 设置文件偏移 */
 	if (lseek(fd, offset, SEEK_SET) < 0) {
 		fprintf(stderr, "Failed to lseek to %d on fd %d: %s.\n",
 			offset, fd, strerror(errno));
 		return (void *) 1;
 	}
-
+	/* 读数据 */
 	nread = read(fd, buffer, length);
 	if (nread == -1 || nread != length) {
 		fprintf(stderr, "read failed in worker thread%d: %s",
 			worker->worker_number, strerror(errno));
 		return (void *) 1;
 	}
-
+	/* 校验 */
 	/* Corruption check */
 	for (i = 0; i < length; i++) {
 		if (buffer[i] != pattern) {
@@ -203,6 +209,15 @@ static void *worker_thread(void *arg)
 	return NULL;
 }
 
+/**ltl
+ *功能:重复调用fork()创建进程，退出进程 
+ *说明:
+       当一个内存页pages已经被一个进程(主进程)使用时，此时在调用fork()创建新进程时，OS就会为此page设置COW(COPY-ON-WRITE)标志。(注:在fork时，对全局数据区的处理)
+
+ 	  这就导致读到内存中的数据与磁盘文件中的数据不一致,或者说内存中的数据招破坏。
+ 	  
+ 出现概率性的原因:当主进程从磁盘读取的数据不是往被标志COW的page写时，此时就不会出现内存数据破坏的原因。
+ */
 static void *fork_thread(void *arg)
 {
 	pid_t pid;
@@ -211,13 +226,14 @@ static void *fork_thread(void *arg)
 
 	while (!done) {
 		pid = tst_fork();
-		if (pid == 0) {
-			exit(0);
+		if (pid == 0) {/* 子进程 */
+			exit(0); /* 子进程退出 */
 		} else if (pid < 0) {
 			fprintf(stderr, "Failed to fork child: %s.\n",
 				strerror(errno));
 			return (void *) 1;
 		}
+		/* 在父进程中等待子进程退出 */
 		waitpid(pid, NULL, 0);
 		usleep(100);
 	}
@@ -265,25 +281,25 @@ static void dma_thread_diotest_verify(void)
 		tst_resm(TINFO, "Reading file %d.", n);
 
 		for (offset = 0; offset < FILESIZE; offset += READSIZE) {
-			memset(buffer, PATTERN, READSIZE + align);
+			memset(buffer, PATTERN, READSIZE + align); /* 初始化buffer的值为fa */
 			for (j = 0; j < workers; j++) {
-				worker[j].offset = offset + j * PAGE_SIZE;
-				worker[j].buffer =
+				worker[j].offset = offset + j * PAGE_SIZE;		/* 文件的起始位置:1M + 线程编号 * PAGE_SIZE */
+				worker[j].buffer =   /* buffer的起始位置  */
 				    buffer + align + j * PAGE_SIZE;
-				worker[j].length = PAGE_SIZE;
+				worker[j].length = PAGE_SIZE; /* 读的文件大小 */
 			}
 			/* The final worker reads whatever is left over. */
 			worker[workers - 1].length =
 			    READSIZE - PAGE_SIZE * (workers - 1);
 
 			done = 0;
-
+			/* 创建一个重复创建新进程，又让新进程退出的线程 */
 			rc = pthread_create(&fork_tid, NULL, fork_thread, NULL);
 			if (rc != 0) {
 				tst_brkm(TBROK, cleanup, "pthread_create "
 					 "failed: %s", strerror(rc));
 			}
-
+			/* 创建工作线程 */
 			for (j = 0; j < workers; j++) {
 				rc = pthread_create(&worker[j].tid, NULL,
 						    worker_thread, worker + j);
@@ -293,7 +309,7 @@ static void dma_thread_diotest_verify(void)
 						 j, strerror(rc));
 				}
 			}
-
+			/* 等待所有的工作线程退出 */
 			for (j = 0; j < workers; j++) {
 				rc = pthread_join(worker[j].tid, &retval);
 				if (rc != 0) {
@@ -310,7 +326,7 @@ static void dma_thread_diotest_verify(void)
 			}
 
 			/* Let the fork thread know it's ok to exit */
-			done = 1;
+			done = 1; /* 让fork_thread线程退出 */
 
 			rc = pthread_join(fork_tid, &retval);
 			if (rc != 0) {
@@ -337,7 +353,10 @@ static void dma_thread_diotest_verify(void)
 	else
 		tst_resm(TPASS, "data corruption is not detected");
 }
-
+/**ltl
+ *功能:1.在/tmp目录下创建100个文件，文件大小为12M，文件内容为分别1-100 ，如:第97个文件，文件内容是a
+       2.申请1M + align,其中align是-a指定的参数。
+ */
 static void setup(void)
 {
 	char filename[PATH_MAX];
@@ -406,12 +425,13 @@ static void setup(void)
 		}
 		mount_flag = 1;
 	}
-
+	/* 分配工作线程的私有数据空间 */
 	worker = SAFE_MALLOC(cleanup, workers * sizeof(worker_t));
 
 	for (j = 0; j < workers; j++)
 		worker[j].worker_number = j;
-
+	
+	/*创建100个文件*/
 	for (n = 1; n <= FILECOUNT; n++) {
 		snprintf(filename, sizeof(filename), FILE_BASEPATH, n);
 
@@ -420,7 +440,7 @@ static void setup(void)
 				 filename);
 		}
 	}
-
+	/* 分配buffer空间 */
 	if (posix_memalign((void **)&buffer, PAGE_SIZE, READSIZE + align) != 0)
 		tst_brkm(TBROK, cleanup, "call posix_memalign failed");
 }
