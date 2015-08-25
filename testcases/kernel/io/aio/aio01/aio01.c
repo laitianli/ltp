@@ -110,28 +110,30 @@ int main(int argc, char **argv)
 		{"F:", &Fflag, &optF},
 		{NULL, NULL, NULL}
 	};
-
+	/* 解析参数 */
 	tst_parse_opts(argc, argv, options, &help);
-
+	/* 内存大小 */
 	bufsize = (bflag ? atoi(optb) : 8192);
-	nr = (nflag ? atoi(optn) : 10);
-	if (Fflag) {
+	nr = (nflag ? atoi(optn) : 10);	/* 请求的次数 */
+	if (Fflag) { /* 文件名 */
 		sprintf(fname, optF);
 	} else {
 		sprintf(fname, "aiofile");
 	}
-
+	/* 安装 */
 	setup();
 
 /* TEST 1 */
+/*  */
 	pos = 0;
 	gettimeofday(&stv, NULL);
+	/* 对iocbs[0]成员赋值  */
 	io_prep_pwrite(iocbs[0], fd, srcbuf, bufsize, pos);
-	for (i = 0; i < nr; i++) {
+	for (i = 0; i < nr; i++) { /* 提交10个相同的请求 */
 		ts.tv_sec = 30;
 		ts.tv_nsec = 0;
 		do {
-			TEST(io_submit(io_ctx, 1, iocbs));
+			TEST(io_submit(io_ctx, 1, iocbs)); /* 提交请求 */
 		} while (TEST_RETURN == -EAGAIN);
 		if (TEST_RETURN < 0) {
 			tst_resm(TFAIL, "Test 1: io_submit failed - retval=%ld"
@@ -139,9 +141,10 @@ int main(int argc, char **argv)
 			failflag = 1;
 			continue;
 		}
-		while (io_getevents(io_ctx, 1, 1, &event, &ts) != 1) ;
+		while (io_getevents(io_ctx, 1, 1, &event, &ts) != 1) ; /* 等待请求完成 */
 		gettimeofday(&etv, NULL);
 	}
+	/* 没有出错的情况下，打印出写所用的时间 */
 	if (!failflag) {
 		sec = etv.tv_sec - stv.tv_sec;
 		usec = etv.tv_usec - stv.tv_usec;
@@ -157,12 +160,13 @@ int main(int argc, char **argv)
 	pos = 0;
 	failflag = 0;
 	gettimeofday(&stv, NULL);
+	/* 对iocbs[0]成员赋值 */
 	io_prep_pread(iocbs[0], fd, dstbuf, bufsize, pos);
 	for (i = 0; i < nr; i++) {
 		ts.tv_sec = 30;
 		ts.tv_nsec = 0;
 		do {
-			TEST(io_submit(io_ctx, 1, iocbs));
+			TEST(io_submit(io_ctx, 1, iocbs)); /* 提交请求 */
 		} while (TEST_RETURN == -EAGAIN);
 		if (TEST_RETURN < 0) {
 			tst_resm(TFAIL, "Test 2: io_submit failed - retval=%ld"
@@ -170,7 +174,7 @@ int main(int argc, char **argv)
 			failflag = 1;
 			continue;
 		}
-		while (io_getevents(io_ctx, 1, 1, &event, &ts) != 1) ;
+		while (io_getevents(io_ctx, 1, 1, &event, &ts) != 1) ; /*等待请求  */
 		gettimeofday(&etv, NULL);
 	}
 	if (!failflag) {
@@ -325,7 +329,7 @@ int main(int argc, char **argv)
 			continue;
 		}
 		while (io_getevents(io_ctx, 1, 1, &event, &ts) != 1) ;
-		for (j = 0; j < bufsize; j++) {
+		for (j = 0; j < bufsize; j++) {/* 校验写入的与读出的是否一致 */
 			if (srcbuf[j] != dstbuf[j]) {
 				tst_resm(TFAIL, "Test 6: compare failed - "
 					 "read: %c, " "actual: %c",
@@ -368,25 +372,27 @@ static void setup(void)
 	TEST_PAUSE;
 
 	tst_tmpdir();
-
+	/* 创建aiofile文件 */
 	if ((fd = open(fname, O_RDWR | O_CREAT, 0600)) < 0)
 		tst_brkm(TFAIL, cleanup, "failed to open %s "
 			 "file, errno: %d", fname, errno);
 	stat(fname, &s);
+	/* 分配iocbs数组 */
 	if ((iocbs = malloc(sizeof(int) * nr)) == NULL)
 		tst_brkm(TFAIL, cleanup, "malloc for iocbs failed - "
 			 "errno: %d", errno);
+	/* 分配iocb对象 */
 	if ((iocbs[0] = malloc(sizeof(struct iocb))) == NULL)
 		tst_brkm(TFAIL, cleanup, "malloc for iocbs elements failed - "
 			 "errno: %d", errno);
 	if (S_ISCHR(s.st_mode)) {
 		if ((ret =
-		     posix_memalign((void **)&srcbuf, bufsize, bufsize)) != 0)
+		     posix_memalign((void **)&srcbuf, bufsize, bufsize)) != 0) /* 分配源buf */
 			tst_brkm(TFAIL, cleanup,
 				 "posix_memalign for srcbuf "
 				 "failed - errno: %d", errno);
 		if ((ret =
-		     posix_memalign((void **)&dstbuf, bufsize, bufsize)) != 0)
+		     posix_memalign((void **)&dstbuf, bufsize, bufsize)) != 0) /* 分配目标buf */
 			tst_brkm(TFAIL, cleanup,
 				 "posix_memalign for dstbuf "
 				 "failed - errno: %d", errno);
@@ -398,8 +404,8 @@ static void setup(void)
 			tst_brkm(TFAIL, cleanup, "malloc for dstbuf "
 				 "failed - errno: %d", errno);
 	}
-	memset((void *)srcbuf, 65, bufsize);
-	if ((ret = io_queue_init(1, &io_ctx)) != 0)
+	memset((void *)srcbuf, 65, bufsize); /* 源buf赋值 */
+	if ((ret = io_queue_init(1, &io_ctx)) != 0) /* 初始化IO上下文对象 */
 		tst_brkm(TFAIL, cleanup, "io_queue_init failed: %s",
 			 strerror(ret));
 }

@@ -81,7 +81,7 @@ void fail_clean(int fd1, int fd2, char *infile, char *outfile)
 	unlink(outfile);
 	tst_brkm(TFAIL, NULL, "Test failed");
 }
-
+/* 校验读出的与写入的是否致 */
 int main(int argc, char *argv[])
 {
 	int bufsize = BUFSIZE;	/* Buffer size. Default 8k */

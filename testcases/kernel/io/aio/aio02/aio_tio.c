@@ -87,7 +87,7 @@ int io_wait_run(io_context_t ctx, struct timespec *to)
 	}
 	return ret;
 }
-
+/* 一次提交多个io请求的操作 */
 int io_tio(char *pathname, int flag, int n, int operation)
 {
 	int res, fd = 0, i = 0;
