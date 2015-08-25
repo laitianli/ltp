@@ -188,7 +188,12 @@ static void setup(void);
 static void cleanup(void);
 static int fd1 = -1;
 static char filename[LEN];
-
+/*
+ * 功能:把异常的参数传给文件操作接口，看是否出现预期的错误。
+ * 实现:<见此文件的注释>
+ *
+ *
+ */
 int main(int argc, char *argv[])
 {
 	int fblocks = 1;	/* Iterations. Default 1 */
@@ -244,7 +249,7 @@ int main(int argc, char *argv[])
 		tst_brkm(TBROK, cleanup, "open failed for %s: %s",
 			 filename, strerror(errno));
 	}
-
+	/* 文件的偏移量为负值 */
 	/* Test-1: Negative Offset */
 	offset = -1;
 	count = bufsize;

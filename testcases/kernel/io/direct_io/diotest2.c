@@ -74,6 +74,7 @@ int TST_TOTAL = 3;		/* Total number of test conditions */
  *	For each iteration, write data starting at offse+iter*bufsize
  *	location in the file and read from there.
 */
+/* 往fd_w写入数据，从fd_r读出数据，判断写入的数据与读出的数据是否一致 */
 int runtest(int fd_r, int fd_w, int iter, off64_t offset, int action)
 {
 	char *buf1;
@@ -133,7 +134,12 @@ int fd1 = -1;
 char filename[LEN];
 static void setup(void);
 static void cleanup(void);
-
+/*
+ *功能:对同一个文件，采用不同方式的写读，判定结果是否一致。
+ *实现:分三个用例完成:(1) write, directIO read,
+ *				  (2) directIO write, read
+ *			       (3) directIO write, directIO read
+ */
 int main(int argc, char *argv[])
 {
 	int iter = 100;		/* Iterations. Default 100 */
@@ -178,7 +184,7 @@ int main(int argc, char *argv[])
 	}
 
 	setup();
-
+	/* 以不同方式打开同一个文件 */
 	/* Testblock-1: Read with Direct IO, Write without */
 	action = READ_DIRECT;
 	if ((fd_w = open(filename, O_WRONLY | O_CREAT, 0666)) < 0)

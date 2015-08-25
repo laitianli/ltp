@@ -81,6 +81,14 @@ void fail_clean(int fd1, int fd2, char *infile, char *outfile)
 	unlink(outfile);
 	tst_brkm(TFAIL, NULL, "Test failed");
 }
+/*
+ *功能:此测试用例功能是测试直接读取写入操作，即O_DIRECT此标志。如果在打开文件时设置了些标志后，
+ *     当请求request提交后，直接响应而没有经过缓冲区层。
+ *实现方式:1.测定系统是否支持O_DIRECT标志。
+ *		 2.以O_DIRECT方式创建文件1，并写入相应的数据。
+ *		 3.从文件1读出数据，把这些数据写入到文件2中。
+ *         4.判定两个文件的内容是否一致。
+ */
 /* 校验读出的与写入的是否致 */
 int main(int argc, char *argv[])
 {
@@ -124,7 +132,7 @@ int main(int argc, char *argv[])
 			prg_usage();
 		}
 	}
-
+	/* 检测系统是否支持O_DIRECT标志 */
 	/* Test for filesystem support of O_DIRECT */
 	if ((fd = open(infile, O_DIRECT | O_RDWR | O_CREAT, 0666)) < 0) {
 		tst_brkm(TCONF,
@@ -133,13 +141,13 @@ int main(int argc, char *argv[])
 	} else {
 		close(fd);
 	}
-
+	/* 创建文件1 */
 	/* Open files */
 	if ((fd1 = open(infile, O_DIRECT | O_RDWR | O_CREAT, 0666)) < 0) {
 		tst_brkm(TFAIL, NULL, "open infile failed: %s",
 			 strerror(errno));
 	}
-
+	/* 创建文件2 */
 	if ((fd2 = open(outfile, O_DIRECT | O_RDWR | O_CREAT, 0666)) < 0) {
 		close(fd1);
 		unlink(infile);
@@ -152,6 +160,7 @@ int main(int argc, char *argv[])
 		tst_resm(TFAIL, "valloc() failed: %s", strerror(errno));
 		fail_clean(fd1, fd2, infile, outfile);
 	}
+	/* 将数据写入到文件1 */
 	for (i = 0; i < numblks; i++) {
 		fillbuf(buf, bufsize, (char)(i % 256));
 		if (write(fd1, buf, bufsize) < 0) {
@@ -167,6 +176,7 @@ int main(int argc, char *argv[])
 		tst_resm(TFAIL, "lseek(infd) failed: %s", strerror(errno));
 		fail_clean(fd1, fd2, infile, outfile);
 	}
+	/* 从文件1读取数据，并写入文件2 */
 	while ((n = read(fd1, buf, bufsize)) > 0) {
 		if (lseek(fd2, offset, SEEK_SET) < 0) {
 			tst_resm(TFAIL, "lseek(outfd) failed: %s",
@@ -185,7 +195,7 @@ int main(int argc, char *argv[])
 			fail_clean(fd1, fd2, infile, outfile);
 		}
 	}
-
+	/* 检测两文件的内容是否一致 */
 	/* Verify */
 	if (filecmp(infile, outfile) != 0) {
 		tst_resm(TFAIL, "file compare failed for %s and %s",

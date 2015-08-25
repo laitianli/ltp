@@ -230,7 +230,13 @@ int child_function(int childnum, int action)
 static void setup(void);
 static void cleanup(void);
 static int fd1 = -1;
-
+/* 
+ * 功能:在没有加锁，多进程的情况下，以不同方式写入读取同一文件中的数据，判定数据是否一致。
+ * 实现:三个测试用例:(1) buffer write, directIO read
+ *				 (2) directIO write, buffer read
+ *				 (3) directIO write, directIO read
+ *	   用例实现方式:创建指定个数的进程，每个进程以不同方式创建文件，写入数据，读出数据，判定写入与读取的数据是否一致。
+ */
 int main(int argc, char *argv[])
 {
 	int *pidlst;
