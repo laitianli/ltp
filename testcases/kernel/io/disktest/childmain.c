@@ -571,6 +571,9 @@ void complete_io(test_env_t * env, const child_args_t * args,
 * Once here, this function will act as if it
 * were 'main' for that thread.
 */
+/**ltl
+ * 功能:工作任务子线程处理函数
+ */
 #ifdef WINDOWS
 DWORD WINAPI ChildMain(test_ll_t * test)
 #else
@@ -631,9 +634,9 @@ void *ChildMain(void *vtest)
 	}
 
 	target.oper = TST_OPER(args->test_state);
-
+	/* 设备名字 */
 	strncpy(filespec, args->device, DEV_NAME_LEN);
-
+	/* 打开设备 */
 	fd = Open(filespec, args->flags);
 	if (INVALID_FD(fd)) {
 		pMsg(ERR, args, "Thread %d: could not open %s, errno = %u.\n",
@@ -680,7 +683,7 @@ void *ChildMain(void *vtest)
 	}
 	delayMask -= 1;
 
-	while (env->bContinue) {
+	while (env->bContinue) {  /* 此值在时间线程里设定(ChildTimer) */
 		if (!is_retry) {
 			retries = args->retries;
 #ifdef _DEBUG
@@ -883,8 +886,7 @@ void *ChildMain(void *vtest)
 				exit_code = ACCESS_FAILURE;
 				is_retry = FALSE;
 				LOCK(env->mutexs.MutexACTION);
-				update_test_state(args, env, this_thread_id, fd,
-						  buf2);
+				update_test_state(args, env, this_thread_id, fd, buf2);
 				decrement_io_count(args, env, target);
 				UNLOCK(env->mutexs.MutexACTION);
 			}

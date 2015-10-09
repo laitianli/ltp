@@ -296,7 +296,7 @@ void *threadedMain(void *vtest)
 	test->args->pid = GETPID();
 
 	init_gbl_data(test->env);
-
+	/* 组装命令字符串 */
 	if (make_assumptions(test->args) < 0) {
 		TEXIT((uintptr_t) GETLASTERROR());
 	}
@@ -311,29 +311,31 @@ void *threadedMain(void *vtest)
 		do_dump(test->args);
 		TEXIT((uintptr_t) GETLASTERROR());
 	} else {
+		/* 初始化数据块 */
 		ulRV = init_data(test, &data_buffer_unaligned);
 		if (ulRV != 0) {
 			TEXIT(ulRV);
 		}
 		pVal1 = (OFF_T *) test->env->shared_mem;
 	}
-
+	/* Start args: (-I b) (-B 512) (-N 4294961622) (-K 4) (-r) (-c) (-p R) (-L 4294961622) (-D 100:0) (-t 0:2m) (-o 0) */
 	pMsg(START, test->args, "Start args: %s\n", test->args->argstr);
 
 	/*
 	 * This loop takes care of passes
 	 */
 	do {
-		test->env->pass_count++;
-		test->env->start_time = time(NULL);
+		test->env->pass_count++;  /* 递增次数 */
+		test->env->start_time = time(NULL);	/* 起始时间 */
 		if (test->args->flags & CLD_FLG_RPTYPE) {	/* force random data to be different each cycle */
+			/* 填充buf */
 			fill_buffer(test->env->data_buffer,
 				    ((test->args->htrsiz * BLK_SIZE) * 2), NULL,
 				    0, CLD_FLG_RPTYPE);
 		}
 		sharedMem = test->env->shared_mem;
 		memset(sharedMem + BMP_OFFSET, 0, test->env->bmp_siz);
-		if ((test->args->flags & CLD_FLG_LINEAR)
+		if ((test->args->flags & CLD_FLG_LINEAR) /* CLD_FLG_RANDOM */
 		    && !(test->args->flags & CLD_FLG_NTRLVD)) {
 			linear_read_write_test(test);
 		} else {
@@ -535,7 +537,9 @@ test_ll_t *run()
 
 	return newTest;
 }
-
+/*
+ *运行命令:./testcases/bin/disktest -h 1s -P T -L 1233333 /dev/sdb1
+*/
 int main(int argc, char **argv)
 {
 	extern time_t global_start_time;
@@ -555,7 +559,7 @@ int main(int argc, char **argv)
 		     "Windows setup of Winsock failed, can't retrieve host name, continuing");
 	}
 #endif
-
+	/* 安装信号，并创建信号处理线程 */
 	setup_sig_mask();
 
 	memset(hostname, 0, HOSTNAME_SIZE);
@@ -580,10 +584,10 @@ int main(int argc, char **argv)
 		strncat(cleanArgs.argstr, " ",
 			(MAX_ARG_LEN - 1) - strlen(cleanArgs.argstr));
 	}
-
+	/* 解析参数 */
 	if (fill_cld_args(argc, argv, &cleanArgs) < 0)
 		exit(1);
-
+	/* 运行 */
 	cleanUp(run());
 
 #ifdef WINDOWS

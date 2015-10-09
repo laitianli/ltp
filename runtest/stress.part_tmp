@@ -1,0 +1,4 @@
+mtest05 mmstress
+mtest06 mmap1 -x 0.05
+
+mem02 mem02

@@ -178,7 +178,8 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				    !(args->flags & CLD_FLG_LUNU))
 					args->flags |= CLD_FLG_LUND;
 			break;
-		case 'B':
+		case 'B':/***/
+			/* 格式:[1K:3M],用来指定一个块的最小块大小和最大块大小 */
 			if (!isdigit(optarg[0])) {
 				pMsg(WARN, args,
 				     "-%c arguments is non numeric.\n", c);
@@ -230,7 +231,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 			      args->htrsiz);
 #endif
 			break;
-		case 'c':
+		case 'c': /* 填充buf的格式 */
 			if (args->flags & CLD_FLG_PTYPS) {
 				pMsg(WARN, args,
 				     "Please specify only one pattern type\n");
@@ -248,7 +249,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 			}
 			args->flags |= CLD_FLG_LPTYPE;
 			break;
-		case 'f':
+		case 'f': /* 以固定的模式填充buf */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -276,7 +277,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 			}
 			args->flags |= CLD_FLG_RPTYPE;
 			break;
-		case 'h':
+		case 'h': /* 心跳时间 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -314,10 +315,10 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 			args->wperc = atoi((char *)(strchr(optarg, ':') + 1));
 			args->flags |= CLD_FLG_DUTY;
 			break;
-		case 'r':
+		case 'r':	/* 读标志 */
 			args->flags |= CLD_FLG_R;
 			break;
-		case 'w':
+		case 'w':	/* 写标志 */
 			args->flags |= CLD_FLG_W;
 			break;
 		case 'o':
@@ -416,7 +417,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				args->cmp_lng *= 1000000;
 			}
 			break;
-		case 'N':
+		case 'N': /* 指定设备/文件的大小 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -443,7 +444,9 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				args->vsiz *= 1000000000;
 			}
 			break;
-		case 'I':
+		case 'I': /* 指定操作的文件类型:B->操作对象为块设备，F->操作对象为文件，D->直接操作块设备
+ 				   * s->表示在调用sync之前要提交多少写个IO请求(s <个数>)
+				   */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -541,7 +544,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				args->delayTimeMax = args->delayTimeMin;
 			}
 			break;
-		case 'T':
+		case 'T': /* 设置运行时间 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -557,7 +560,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				args->run_time *= (time_t) (60 * 60 * 24);
 			}
 			break;
-		case 'L':
+		case 'L': /* 偏移量 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -579,7 +582,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				args->seeks *= 1000000000;
 			}
 			break;
-		case 'C':
+		case 'C':	/* 任务循环次数 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -594,7 +597,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 			args->flags |= CLD_FLG_CYC;
 			args->cycles = atol(optarg);
 			break;
-		case 'K':
+		case 'K':	/* 线程的个数 */
 			if (optarg == NULL) {
 				pMsg(WARN, args,
 				     "-%c option requires an argument.\n", c);
@@ -648,7 +651,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				return (-1);
 			}
 			break;
-		case 'S':
+		case 'S': /* 设置起始块号和结束块号[startBlock:endBlock] */
 			if (!isdigit((int)optarg[0])) {
 				pMsg(WARN, args,
 				     "-%c arguments is non numeric.\n", c);
@@ -717,7 +720,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 				}
 			}
 			break;
-		case 's':
+		case 's': /*LBA起始地址: 结束地址(startLBA:endLBA) */
 			if (!isdigit((int)optarg[0])) {
 				pMsg(WARN, args,
 				     "-%c argument is non numeric.\n", c);
@@ -796,6 +799,7 @@ int fill_cld_args(int argc, char **argv, child_args_t * args)
 		pMsg(WARN, args, "Unspecified target.\n");
 		return (-1);
 	}
+	/* 最后一个为设备名字(文件名路径) */
 	strncpy(args->device, argv[optind], (DEV_NAME_LEN - 1));
 	return 0;
 }

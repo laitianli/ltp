@@ -63,6 +63,9 @@
  * threads and will complete either after all IO threads exit, the test fails,
  * or if a timed run, the run time is exceeded.
  */
+/**
+ * 功能: 时间处理线程处理函数
+ */
 #ifdef WINDOWS
 DWORD WINAPI ChildTimer(test_ll_t * test)
 #else
@@ -183,6 +186,7 @@ void *ChildTimer(void *vtest)
 		if (signal_action & SIGNAL_STOP) {
 			break;
 		}
+		/* 超过设定的时间 */
 		/* user request to stop */
 		if (args->flags & CLD_FLG_TMD) {	/* if timing */
 			if (run_time >= args->run_time) {	/* and run time exceeded */
@@ -204,6 +208,7 @@ void *ChildTimer(void *vtest)
 		PDBG3(DBUG, args,
 		      "Setting bContinue to FALSE, timed test & timer exit\n");
 #endif
+		/* 设置此值，使工作线程不工作 */
 		env->bContinue = FALSE;
 	}
 

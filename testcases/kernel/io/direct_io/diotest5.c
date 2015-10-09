@@ -167,7 +167,9 @@ void prg_usage()
 
 static void setup(void);
 static void cleanup(void);
-
+/*
+ *功能:与diotest2相识,即对同一个文件以不同方式打开，对其写数据，读数据，判定数据一致性。区别在于测试的接口不一致，diotest2测试read/write，而此用例是测试readv/writev
+ */
 int main(int argc, char *argv[])
 {
 	int i, action, fd_r, fd_w;

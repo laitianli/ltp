@@ -48,7 +48,7 @@ HANDLE sig_mutex;
 #else
 pthread_mutex_t sig_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
-
+/* 处理信号的线程 */
 #ifdef WINDOWS
 void sig_handler(int sig)
 #else
@@ -61,7 +61,7 @@ void *sig_handler(void *arg)
 	int rv;
 
 	/* wait for any and all signals */
-	sigfillset(&signal_set);
+	sigfillset(&signal_set); /* siganl_set信号集中包括所有的信号 */
 #ifdef AIX
 	/* except in AIX, can't sigwait on this signals */
 	sigdelset(&signal_set, SIGKILL);
@@ -70,7 +70,7 @@ void *sig_handler(void *arg)
 #endif
 
 	for (;;) {
-		rv = sigwait(&signal_set, &sig);
+		rv = sigwait(&signal_set, &sig);	/* 等待信号的产生 */
 #endif
 
 		switch (sig) {
@@ -153,7 +153,7 @@ void setup_sig_mask(void)
 #else
 	pthread_sigmask(SIG_SETMASK, &signal_set, NULL);
 #endif
-
+	/* 创建信号处理线程 */
 	/* create the signal handling thread */
 	pthread_create(&sig_thread, NULL, sig_handler, NULL);
 #endif

@@ -250,7 +250,10 @@ int child_function(int childnum, int action)
 	close(fd_r);
 	exit(0);
 }
-
+/*
+ * 功能:与diotest3相识，以多进程方式测试readv/writev接口
+ *
+ */
 int main(int argc, char *argv[])
 {
 	int *pidlst;
